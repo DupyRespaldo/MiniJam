@@ -1,0 +1,68 @@
+# Ignore binary files
+*.exe
+*.dll
+*.lib
+*.app
+*.dylib
+*.so
+
+# Ignore intermediate build files
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Ignore user-specific files
+*.suo
+*.user
+*.userprefs
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+
+# Ignore macOS files
+.DS_Store
+
+# Ignore Visual Studio files
+.vscode/
+.vs/
+*.VC.db
+*.VC.opendb
+
+# Ignore crash reports and autosaves
+*.tmp
+*.bak
+*.autosave
+
+# Ignore Unreal-specific backup and temp files
+*.uasset.tmp
+*.umap.tmp
+
+# Ignore compiled assets and shaders
+DerivedDataCache/
+Saved/Backup/
+Saved/Cooked/
+Saved/Logs/
+Saved/Config/WindowsEditor/*.ini
+
+# Ignore project-specific cache
+*.sdf
+*.opensdf
+*.ipch
+
+# Optional: ignore your packaged builds
+WindowsNoEditor/
+LinuxNoEditor/
+MacNoEditor/
+HTML5/
+
+# Ignore environment-specific files
+.env
+.env.*
+
+# Optional: ignore plugins or third-party dependencies (customize as needed)
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+Plugins/*/Saved/
