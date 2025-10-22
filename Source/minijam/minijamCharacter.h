@@ -85,6 +85,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	UPROPERTY(BlueprintReadOnly, Category = "Objetive")
+	bool bCarryObjetive = false;;
+
 public:
 
 	/** Returns CameraBoom subobject **/
