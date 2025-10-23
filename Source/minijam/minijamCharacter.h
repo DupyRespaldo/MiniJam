@@ -14,10 +14,6 @@ struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
-/**
- *  A simple player-controllable third person character
- *  Implements a controllable orbiting camera
- */
 UCLASS(abstract)
 class AminijamCharacter : public ACharacter
 {
@@ -32,20 +28,16 @@ class AminijamCharacter : public ACharacter
 	UCameraComponent* FollowCamera;
 	
 protected:
-
-	/** Jump Input Action */
+	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* JumpAction;
-
-	/** Move Input Action */
+	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MoveAction;
-
-	/** Look Input Action */
+	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* LookAction;
-
-	/** Mouse Look Input Action */
+	
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
 

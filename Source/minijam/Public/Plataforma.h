@@ -14,6 +14,8 @@ class MINIJAM_API APlataforma : public ACollisionHandler
 public:
 	APlataforma();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void Tick(float DeltaTime) override;
 	virtual void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -42,7 +44,4 @@ protected:
 	void ToggleMaterial();
 	void Disappear();
 	void ResetPlatform();
-
-public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

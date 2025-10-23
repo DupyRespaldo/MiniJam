@@ -36,15 +36,12 @@ void APilar::Tick(float DeltaTime)
 	SetActorLocation(NewLocation);
 }
 
-void APilar::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-							UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-							const FHitResult& SweepResult)
+void APilar::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,const FHitResult& SweepResult)
 {
 	bPlayerOnTop = true;
 }
 
-void APilar::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-						  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void APilar::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	bPlayerOnTop = false;
 }
