@@ -33,15 +33,23 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Platform")
 	UMaterialInterface* MaterialBlink;
-
+		
 	FTimerHandle TimerDisappear;
 	FTimerHandle TimerReset;
 	FTimerHandle TimerBlink;
 
 	bool bIsBlinking = false;
 
-	void StartBlinking();
-	void ToggleMaterial();
+	UPROPERTY(ReplicatedUsing = OnRep_IsHidden)
+	bool bIsHidden = false;
+
+	UFUNCTION()
+	void OnRep_IsHidden();
+
 	void Disappear();
 	void ResetPlatform();
+	void ToggleMaterial();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StartBlinking();
 };

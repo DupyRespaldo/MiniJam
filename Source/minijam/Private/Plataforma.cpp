@@ -6,25 +6,31 @@
 APlataforma::APlataforma()
 {
 	bReplicates = true;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void APlataforma::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-								 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-								 const FHitResult& SweepResult)
+                                 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                 const FHitResult& SweepResult)
 {
 	if (HasAuthority())
 	{
-		GetWorldTimerManager().SetTimer(TimerBlink, this, &APlataforma::StartBlinking, DisappearTime - 1.5f, false);
+		GetWorldTimerManager().SetTimer(TimerBlink, [this]()
+		{
+			Multicast_StartBlinking();
+		}, DisappearTime - 1.5f, false);
+		
 		GetWorldTimerManager().SetTimer(TimerDisappear, this, &APlataforma::Disappear, DisappearTime, false);
 	}
 }
 
 void APlataforma::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-							   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+                               UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+
 }
 
-void APlataforma::StartBlinking()
+void APlataforma::Multicast_StartBlinking_Implementation()
 {
 	bIsBlinking = true;
 	GetWorldTimerManager().SetTimer(TimerBlink, this, &APlataforma::ToggleMaterial, 0.2f, true);
@@ -43,19 +49,37 @@ void APlataforma::Disappear()
 {
 	if (HasAuthority())
 	{
-		SetActorHiddenInGame(true);
-		SetActorEnableCollision(false);
+		bIsHidden = true; 
+		OnRep_IsHidden();
+
 		GetWorldTimerManager().ClearTimer(TimerBlink);
 		GetWorldTimerManager().SetTimer(TimerReset, this, &APlataforma::ResetPlatform, 5.0f, false);
 	}
 }
 
+void APlataforma::OnRep_IsHidden()
+{
+	SetActorHiddenInGame(bIsHidden);
+	SetActorEnableCollision(!bIsHidden);
+
+	if (bIsHidden)
+	{
+		Mesh->SetVisibility(false);
+	}
+	else
+	{
+		Mesh->SetVisibility(true);
+		Mesh->SetMaterial(0, MaterialNormal);
+	}
+}
+
 void APlataforma::ResetPlatform()
 {
-	SetActorHiddenInGame(false);
-	SetActorEnableCollision(true);
-	Mesh->SetMaterial(0, MaterialNormal);
-	bIsBlinking = false;
+	if (HasAuthority())
+	{
+		bIsHidden = false;
+		OnRep_IsHidden();
+	}
 }
 
 void APlataforma::Tick(float DeltaTime)
@@ -67,4 +91,5 @@ void APlataforma::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(APlataforma, DisappearTime);
+	DOREPLIFETIME(APlataforma, bIsHidden);
 }

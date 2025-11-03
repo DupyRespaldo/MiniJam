@@ -16,9 +16,18 @@ class AminijamGameMode : public AGameModeBase
 
 public:
 	
-	/** Constructor */
 	AminijamGameMode();
+
+	void CompleteMission(APawn* Pawn);
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = GM)
+	void OnMissionComplete(APawn* Pawn);
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Spectator")
+	TSubclassOf<AActor> SpectatorViewClass;
 };
+
 
 
 
