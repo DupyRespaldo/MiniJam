@@ -37,13 +37,15 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_IsHidden)
 	bool bIsHidden = false;
 
+	UPROPERTY(Replicated)
+	int32 OverlappingPlayers = 0; // cantidad de jugadores dentro
+
 	FTimerHandle TimerDisappear;
 	FTimerHandle TimerReset;
 	FTimerHandle TimerBlink;
 
 	bool bIsBlinking = false;
 
-	// === Funciones ===
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 						UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,

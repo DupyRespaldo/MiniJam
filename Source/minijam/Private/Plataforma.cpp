@@ -2,17 +2,16 @@
 #include "Components/BoxComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
+#include "GameFramework/Character.h"
 
 APlataforma::APlataforma()
 {
 	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Mesh principal
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	RootComponent = Mesh;
 
-	// Collider
 	CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
 	CollisionBox->SetupAttachment(Mesh);
 	CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -30,7 +29,12 @@ void APlataforma::BeginPlay()
 void APlataforma::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (HasAuthority())
+	if (!HasAuthority() || !OtherActor->IsA<ACharacter>()) return;
+
+	OverlappingPlayers++;
+
+	// Si es el primer jugador, comienza la secuencia
+	if (OverlappingPlayers == 1 && !bIsHidden)
 	{
 		GetWorldTimerManager().SetTimer(TimerBlink, [this]()
 		{
@@ -44,7 +48,21 @@ void APlataforma::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 void APlataforma::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	// No hace nada al salir — solo reaparece después del timer
+	if (!HasAuthority() || !OtherActor->IsA<ACharacter>()) return;
+
+	OverlappingPlayers = FMath::Max(0, OverlappingPlayers - 1);
+	
+	if (OverlappingPlayers == 0 && bIsHidden)
+	{
+		GetWorldTimerManager().SetTimer(TimerReset, this, &APlataforma::ResetPlatform, 3.0f, false);
+	}
+	else if (OverlappingPlayers == 0)
+	{
+		GetWorldTimerManager().ClearTimer(TimerBlink);
+		GetWorldTimerManager().ClearTimer(TimerDisappear);
+		bIsBlinking = false;
+		if (MaterialNormal) Mesh->SetMaterial(0, MaterialNormal);
+	}
 }
 
 void APlataforma::Multicast_StartBlinking_Implementation()
@@ -57,9 +75,9 @@ void APlataforma::ToggleMaterial()
 {
 	if (!Mesh || !MaterialNormal || !MaterialBlink) return;
 
-	static bool bUseAlt = false;
-	Mesh->SetMaterial(0, bUseAlt ? MaterialNormal : MaterialBlink);
-	bUseAlt = !bUseAlt;
+	static bool bAlt = false;
+	Mesh->SetMaterial(0, bAlt ? MaterialNormal : MaterialBlink);
+	bAlt = !bAlt;
 }
 
 void APlataforma::Disappear()
@@ -70,7 +88,6 @@ void APlataforma::Disappear()
 		OnRep_IsHidden();
 
 		GetWorldTimerManager().ClearTimer(TimerBlink);
-		GetWorldTimerManager().SetTimer(TimerReset, this, &APlataforma::ResetPlatform, 5.0f, false);
 	}
 }
 
@@ -108,4 +125,5 @@ void APlataforma::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(APlataforma, DisappearTime);
 	DOREPLIFETIME(APlataforma, bIsHidden);
+	DOREPLIFETIME(APlataforma, OverlappingPlayers);
 }
