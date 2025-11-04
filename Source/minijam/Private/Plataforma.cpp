@@ -1,17 +1,34 @@
 #include "Plataforma.h"
+#include "Components/BoxComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
-#include "Components/StaticMeshComponent.h"
 
 APlataforma::APlataforma()
 {
 	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = true;
+
+	// Mesh principal
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	RootComponent = Mesh;
+
+	// Collider
+	CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
+	CollisionBox->SetupAttachment(Mesh);
+	CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionBox->SetCollisionResponseToAllChannels(ECR_Overlap);
+
+	CollisionBox->OnComponentBeginOverlap.AddDynamic(this, &APlataforma::OnBeginOverlap);
+	CollisionBox->OnComponentEndOverlap.AddDynamic(this, &APlataforma::OnEndOverlap);
+}
+
+void APlataforma::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 void APlataforma::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                 UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
-                                 const FHitResult& SweepResult)
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (HasAuthority())
 	{
@@ -19,15 +36,15 @@ void APlataforma::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 		{
 			Multicast_StartBlinking();
 		}, DisappearTime - 1.5f, false);
-		
+
 		GetWorldTimerManager().SetTimer(TimerDisappear, this, &APlataforma::Disappear, DisappearTime, false);
 	}
 }
 
 void APlataforma::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                               UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-
+	// No hace nada al salir — solo reaparece después del timer
 }
 
 void APlataforma::Multicast_StartBlinking_Implementation()
@@ -49,7 +66,7 @@ void APlataforma::Disappear()
 {
 	if (HasAuthority())
 	{
-		bIsHidden = true; 
+		bIsHidden = true;
 		OnRep_IsHidden();
 
 		GetWorldTimerManager().ClearTimer(TimerBlink);
@@ -62,14 +79,13 @@ void APlataforma::OnRep_IsHidden()
 	SetActorHiddenInGame(bIsHidden);
 	SetActorEnableCollision(!bIsHidden);
 
-	if (bIsHidden)
+	if (Mesh)
 	{
-		Mesh->SetVisibility(false);
-	}
-	else
-	{
-		Mesh->SetVisibility(true);
-		Mesh->SetMaterial(0, MaterialNormal);
+		Mesh->SetVisibility(!bIsHidden);
+		if (!bIsHidden && MaterialNormal)
+		{
+			Mesh->SetMaterial(0, MaterialNormal);
+		}
 	}
 }
 
