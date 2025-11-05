@@ -44,7 +44,14 @@ protected:
 public:
 
 	/** Constructor */
-	AminijamCharacter();	
+	AminijamCharacter();
+
+	UPROPERTY(EditAnywhere, Category="Carry System")
+	float CarryDistance = 150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Carry System")
+	FVector ThrowForce = FVector(1000.0f, 0.0f, 500.0f);
+
 
 protected:
 
@@ -87,5 +94,38 @@ public:
 
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	// Carry System
+	UPROPERTY(Replicated)
+	AminijamCharacter* CarriedPlayer; // El jugador que estás cargando
+
+	UPROPERTY(Replicated)
+	bool bIsBeingCarried = false;
+	
+	UFUNCTION(Server, Reliable)
+	void ServerTryCarry();
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropOrThrow(bool bThrow);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastAttachPlayer(AminijamCharacter* Target);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastDetachPlayer(bool bThrow);
+
+	void TryCarry();
+	void DropOrThrow(bool bThrow);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	class UInputAction* InteractAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	class UInputAction* ThrowAction;
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void DropOrThrowTrue();
 };
 
