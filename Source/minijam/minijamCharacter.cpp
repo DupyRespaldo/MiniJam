@@ -10,6 +10,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
 #include "minijam.h"
 
 AminijamCharacter::AminijamCharacter()
@@ -65,6 +68,11 @@ void AminijamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AminijamCharacter::Look);
+
+		//ThrowAction
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AminijamCharacter::TryCarry);
+		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Started, this, &AminijamCharacter::DropOrThrowTrue);
+
 	}
 	else
 	{
@@ -130,4 +138,130 @@ void AminijamCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void AminijamCharacter::TryCarry()
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, TEXT("TryCarry pressed"));
+    ServerTryCarry();
+}
+
+void AminijamCharacter::DropOrThrow(bool bThrow)
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, FString::Printf(TEXT("DropOrThrow called, bThrow = %s"), bThrow ? TEXT("true") : TEXT("false")));
+    ServerDropOrThrow(bThrow);
+}
+
+void AminijamCharacter::DropOrThrowTrue()
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("DropOrThrowTrue called"));
+    DropOrThrow(true);
+}
+
+void AminijamCharacter::ServerTryCarry_Implementation()
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::White, TEXT("ServerTryCarry_Implementation called"));
+
+    if (CarriedPlayer)
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Already carrying someone"));
+        return;
+    }
+
+    FVector Start = FollowCamera->GetComponentLocation();
+    FVector End = Start + (FollowCamera->GetForwardVector() * CarryDistance);
+
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Pawn, Params))
+    {
+        AminijamCharacter* HitPlayer = Cast<AminijamCharacter>(Hit.GetActor());
+        if (HitPlayer && !HitPlayer->bIsBeingCarried)
+        {
+            CarriedPlayer = HitPlayer;
+            HitPlayer->bIsBeingCarried = true;
+            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("Player found and attached"));
+            MulticastAttachPlayer(HitPlayer);
+        }
+        else
+        {
+            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Player found but already carried or invalid"));
+        }
+    }
+    else
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("No player hit in trace"));
+    }
+}
+
+void AminijamCharacter::ServerDropOrThrow_Implementation(bool bThrow)
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::White, FString::Printf(TEXT("ServerDropOrThrow_Implementation called, bThrow = %s"), bThrow ? TEXT("true") : TEXT("false")));
+
+    if (!CarriedPlayer)
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("No carried player to drop"));
+        return;
+    }
+
+    AminijamCharacter* Target = CarriedPlayer;
+    CarriedPlayer = nullptr;
+    Target->bIsBeingCarried = false;
+
+    MulticastDetachPlayer(bThrow);
+}
+
+void AminijamCharacter::MulticastAttachPlayer_Implementation(AminijamCharacter* Target)
+{
+    if (!Target)
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("MulticastAttachPlayer: Target is null"));
+        return;
+    }
+
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("MulticastAttachPlayer executed"));
+
+    FAttachmentTransformRules AttachRules(EAttachmentRule::KeepWorld, true);
+    Target->AttachToComponent(GetMesh(), AttachRules, FName("spine_03"));
+
+    FVector Offset(0, 0, 100);
+    Target->SetActorRelativeLocation(Offset);
+    Target->GetCharacterMovement()->DisableMovement();
+}
+
+void AminijamCharacter::MulticastDetachPlayer_Implementation(bool bThrow)
+{
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Blue, FString::Printf(TEXT("MulticastDetachPlayer called, bThrow = %s"), bThrow ? TEXT("true") : TEXT("false")));
+
+    if (!CarriedPlayer && !bIsBeingCarried)
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("No player to detach"));
+        return;
+    }
+
+    ACharacter* Carrier = nullptr;
+    if (bIsBeingCarried)
+    {
+        Carrier = Cast<AminijamCharacter>(GetAttachParentActor());
+    }
+
+    DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+    GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+    if (bThrow && Carrier)
+    {
+        FVector ForwardDir = Carrier->GetActorForwardVector();
+        LaunchCharacter(ThrowForce, true, true);
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("Player thrown"));
+    }
+}
+
+void AminijamCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AminijamCharacter, CarriedPlayer);
+    DOREPLIFETIME(AminijamCharacter, bIsBeingCarried);
 }
