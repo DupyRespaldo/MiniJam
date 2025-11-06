@@ -61,7 +61,5 @@ protected:
 	void OnRep_IsPressed();
 	static void CheckAllPlatesPressed_Server();
 	void HandleAllPlatesPressed();
-
-public:	
-	virtual void Tick(float DeltaTime) override;
+	
 };

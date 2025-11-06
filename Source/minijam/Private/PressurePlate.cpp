@@ -9,7 +9,7 @@ TArray<APressurePlate*> APressurePlate::AllPlates;
 
 APressurePlate::APressurePlate()
 {
-	PrimaryActorTick.bCanEverTick = false; // no hace falta tick
+	PrimaryActorTick.bCanEverTick = false; 
 	bReplicates = true;
 
 	PlateMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PlateMesh"));
