@@ -1,6 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-
 #include "minijamPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -8,6 +7,9 @@
 #include "Blueprint/UserWidget.h"
 #include "minijam.h"
 #include "Widgets/Input/SVirtualJoystick.h"
+#include "InputCoreTypes.h"
+#include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 void AminijamPlayerController::BeginPlay()
 {
@@ -18,18 +20,15 @@ void AminijamPlayerController::BeginPlay()
 	{
 		// spawn the mobile controls widget
 		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
-
 		if (MobileControlsWidget)
 		{
 			// add the controls to the player screen
 			MobileControlsWidget->AddToPlayerScreen(0);
-
-		} else {
-
-			UE_LOG(Logminijam, Error, TEXT("Could not spawn mobile controls widget."));
-
 		}
-
+		else
+		{
+			UE_LOG(Logminijam, Error, TEXT("Could not spawn mobile controls widget."));
+		}
 	}
 }
 
@@ -41,7 +40,8 @@ void AminijamPlayerController::SetupInputComponent()
 	if (IsLocalPlayerController())
 	{
 		// Add Input Mapping Contexts
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
 			{
@@ -57,5 +57,48 @@ void AminijamPlayerController::SetupInputComponent()
 				}
 			}
 		}
+
+		// tecla uno para viajar
+		InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AminijamPlayerController::HandleStartKey);
+	}
+}
+
+// por seguridad
+void AminijamPlayerController::HandleStartKey()
+{
+	const FString URL = LavaPitMapURL.IsEmpty()
+		? TEXT("/Game/Levels/L1_LavaPit?listen")
+		: LavaPitMapURL;
+
+	if (HasAuthority())
+	{
+		UE_LOG(Logminijam, Warning, TEXT("EL HOST COMNEZO LA PARTIDA, %s"), *URL);
+		TravelToMap(URL);
+	}
+	else
+	{
+		UE_LOG(Logminijam, Warning, TEXT("CLIENTE QUIERE COMENZAR LA PARTIDA → PIDIENDO AL HOST %s"), *URL);
+		Server_StartMatch(URL);
+	}
+}
+
+void AminijamPlayerController::Server_StartMatch_Implementation(const FString& MapURL)
+{
+	TravelToMap(MapURL);
+}
+
+void AminijamPlayerController::TravelToMap(const FString& MapURL)
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	if (World->IsNetMode(NM_ListenServer) || World->IsNetMode(NM_DedicatedServer))
+	{
+		World->ServerTravel(MapURL /* bAbsolute = false */);
+	}
+	else
+	{
+		// PRIMER NIVEL
+		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Levels/L1_LavaPit")));
 	}
 }
