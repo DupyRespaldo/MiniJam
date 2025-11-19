@@ -55,17 +55,7 @@ void ABoton::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherAc
 	if (Player)
 	{
 		OverlappingPlayer = Player;
-		/*
-
-		if (InteractionWidgetClass && !ActiveWidget)
-		{
-			ActiveWidget = CreateWidget<UUserWidget>(Player->GetController(), InteractionWidgetClass);
-			if (ActiveWidget)
-			{
-				ActiveWidget->AddToViewport();
-			}
-		}
-		*/
+		// Logica de viaje nivel
 	}
 }
 
