@@ -9,6 +9,7 @@ class USphereComponent;
 class UParticleSystem;
 
 UCLASS()
+
 class MINIJAM_API ATesoro : public AActor
 {
 	GENERATED_BODY()
@@ -17,7 +18,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UStaticMeshComponent* MeshComp;
 	
@@ -26,11 +27,16 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
 	UParticleSystem* PickUpVFX;
-
 	void PlayEffects();
+	UPROPERTY(EditDefaultsOnly, Category="Treasure")
+	FName TreasureTag = "HasTreasure";
 
-public:
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(EditDefaultsOnly, Category="Treasure")
+	bool bDestroyOnPickup = true;
 
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+	UFUNCTION()
+	void HandleOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+					   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+					   bool bFromSweep, const FHitResult& SweepResult);
+	
 };

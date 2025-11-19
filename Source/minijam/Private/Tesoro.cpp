@@ -4,6 +4,8 @@
 #include "Tesoro.h"
 #include "Components/SphereComponent.h"
 #include "minijam/minijamCharacter.h"
+#include "minijam/minijamPlayerController.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 
 ATesoro::ATesoro()
@@ -18,12 +20,14 @@ ATesoro::ATesoro()
 	SphereComp->SetCollisionResponseToChannels(ECR_Ignore); 
 	SphereComp->SetCollisionResponseToChannel(ECC_Pawn,ECR_Overlap); 
 	SphereComp->SetupAttachment(RootComponent);
-}
+	PrimaryActorTick.bCanEverTick = false;
 
-void ATesoro::BeginPlay()
-{
-	Super::BeginPlay();
-	
+	// PLACEHOLDER
+	USphereComponent* Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
+	Sphere->InitSphereRadius(60.f);
+	Sphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	Sphere->SetGenerateOverlapEvents(true);
+	SetRootComponent(Sphere);
 }
 
 void ATesoro::PlayEffects()
@@ -31,21 +35,43 @@ void ATesoro::PlayEffects()
 	UGameplayStatics::SpawnEmitterAtLocation(this,PickUpVFX,GetActorLocation());
 }
 
-void ATesoro::Tick(float DeltaTime)
+void ATesoro::BeginPlay()
 {
-	Super::Tick(DeltaTime);
+	Super::BeginPlay();
 
+	if (UPrimitiveComponent* Collision = Cast<UPrimitiveComponent>(GetRootComponent()))
+	{
+		Collision->OnComponentBeginOverlap.AddDynamic(this, &ATesoro::HandleOverlap);
+	}
 }
 
-void ATesoro::NotifyActorBeginOverlap(class AActor* OtherActor)
+void ATesoro::HandleOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+							UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+							bool bFromSweep, const FHitResult& SweepResult)
 {
-	Super::NotifyActorBeginOverlap(OtherActor);
-	PlayEffects();
-
-	AminijamCharacter* MyCharacter = Cast<AminijamCharacter>(OtherActor);
-	if (MyCharacter)
+	if (!HasAuthority())
 	{
-		MyCharacter->bCarryObjetive = true;
+		return;
+	}
+
+	APawn* Pawn = Cast<APawn>(OtherActor);
+	if (!Pawn)
+	{
+		return;
+	}
+
+	if (!OtherActor->Tags.Contains(TreasureTag))
+	{
+		OtherActor->Tags.Add(TreasureTag);
+	}
+
+	if (AminijamPlayerController* PC = Cast<AminijamPlayerController>(Pawn->GetController()))
+	{
+		PC->ClientShowCenterToast(FText::FromString(TEXT("GOT THE TREASUERE")));
+	}
+
+	if (bDestroyOnPickup)
+	{
 		Destroy();
 	}
 }

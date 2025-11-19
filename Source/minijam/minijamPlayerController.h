@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Blueprint/UserWidget.h"
 #include "minijamPlayerController.generated.h"
 
 class UInputMappingContext;
 class UUserWidget;
+
 
 /**
  *  Basic PlayerController class for a third person game
@@ -25,6 +27,13 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_StartMatch(const FString& MapURL);
+
+	// HUD
+	UFUNCTION(Client, Reliable)
+	void ClientShowVictory();
+
+	UFUNCTION(Client, Reliable)
+	void ClientShowCenterToast(const FText& Message);
 
 protected:
 	// no funciona :/
@@ -54,4 +63,10 @@ protected:
 
 	/** Input mapping context setup */
 	virtual void SetupInputComponent() override;
+
+	UPROPERTY(EditDefaultsOnly, Category="UI")
+	TSubclassOf<UUserWidget> VictoryWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> VictoryWidgetInstance;
 };

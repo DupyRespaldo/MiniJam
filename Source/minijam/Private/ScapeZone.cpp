@@ -6,49 +6,63 @@
 #include "Components/DecalComponent.h"
 #include "minijam/minijamCharacter.h"
 #include "minijam/minijamGameMode.h"
+#include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
+#include "minijamGameMode.h"
+#include "minijam/minijamPlayerController.h"
 
-// Sets default values
+
+
 AScapeZone::AScapeZone()
 {
-	OverlapComp = CreateDefaultSubobject<UBoxComponent>(TEXT("Overlap Component")); OverlapComp->SetCollisionEnabled( ECollisionEnabled::QueryOnly);
-	OverlapComp->SetCollisionResponseToChannels ( ECR_Overlap); OverlapComp->SetCollisionResponseToChannel (ECC_Pawn, ECR_Overlap);
-	RootComponent = OverlapComp;
-	OverlapComp->SetHiddenInGame(false);
-	
-	Decalcomp = CreateDefaultSubobject<UDecalComponent>(TEXT("Decalcomp"));
-	Decalcomp-> DecalSize = FVector(200);
-	Decalcomp-> SetupAttachment(RootComponent);
+	PrimaryActorTick.bCanEverTick = false;
+
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComp"));
+	RootComponent = BoxComp;
+
+	BoxComp->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	BoxComp->SetGenerateOverlapEvents(true);
+
+	bReplicates = true;
 }
 
 void AScapeZone::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	BoxComp->OnComponentBeginOverlap.AddDynamic(this, &AScapeZone::HandleOverlap);
 }
 
-void AScapeZone::PostInitializeComponents()
+void AScapeZone::HandleOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+							   UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+							   bool bFromSweep, const FHitResult& SweepResult)
 {
-	Super::PostInitializeComponents();
-	OverlapComp->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::HandleOverlap);
-}
-
-void AScapeZone::HandleOverlap (UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	if (GEngine)
+	if (!HasAuthority())
 	{
 		GEngine->AddOnScreenDebugMessage(-1,10.f,FColor:: Green,FString::Printf(  TEXT("Overlapped")));
+		return;
 	}
-	AminijamCharacter* MyPawn = Cast<AminijamCharacter>(OtherActor);
-	if (MyPawn == nullptr) return;
-	if (MyPawn->bCarryObjetive)
+
+	APawn* Pawn = Cast<APawn>(OtherActor);
+	if (!Pawn)
 	{
-		AminijamGameMode* GM = Cast<AminijamGameMode>(GetWorld()->GetAuthGameMode());
-		if (GM)
+		return;
+	}
+
+	if (bRequireTreasure && !OtherActor->Tags.Contains(TreasureTag))
+	{
+		if (AminijamPlayerController* PC = Cast<AminijamPlayerController>(Pawn->GetController()))
 		{
-			GM->CompleteMission(MyPawn);
+			PC->ClientShowCenterToast(FText::FromString(TEXT("YOU NEED A TREASURE TO ABLE ESCAPE")));
 		}
-		
+		return;
+	}
+	
+	if (AminijamGameMode* GM = GetWorld()->GetAuthGameMode<AminijamGameMode>())
+	{
+		GM->CompleteMission(Pawn); 
 	}
 }
+
+
 

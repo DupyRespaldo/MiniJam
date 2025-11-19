@@ -10,6 +10,7 @@
 #include "InputCoreTypes.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h" 
 
 void AminijamPlayerController::BeginPlay()
 {
@@ -100,5 +101,32 @@ void AminijamPlayerController::TravelToMap(const FString& MapURL)
 	{
 		// PRIMER NIVEL
 		UGameplayStatics::OpenLevel(this, FName(TEXT("/Game/Levels/L1_LavaPit")));
+	}
+}
+
+void AminijamPlayerController::ClientShowVictory_Implementation()
+{
+	if (VictoryWidgetClass && !VictoryWidgetInstance)
+	{
+		VictoryWidgetInstance = CreateWidget<UUserWidget>(this, VictoryWidgetClass);
+		if (VictoryWidgetInstance)
+		{
+			VictoryWidgetInstance->AddToViewport(900); 
+			ClientShowCenterToast(FText::FromString(TEXT("EN TEORÍA VICTORIA?")));
+		}
+	}
+
+	FInputModeUIOnly InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	SetShowMouseCursor(true);
+	SetPause(true);
+}
+
+void AminijamPlayerController::ClientShowCenterToast_Implementation(const FText& Message)
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, Message.ToString());
 	}
 }
